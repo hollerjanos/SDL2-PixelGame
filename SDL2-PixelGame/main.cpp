@@ -113,13 +113,19 @@ int main(int argc, char *argv[])
             // Update the surface
             SDL_UpdateWindowSurface(gWindow);
 
-            // Hack to get window to stay up
-            SDL_Event event;
+            // Main loop flag
             bool quit = false;
+
+            // Event handler
+            SDL_Event event;
+
+            // While application is running
             while (!quit)
             {
-                while (SDL_PollEvent(&event))
+                // Handle events on queue
+                while (SDL_PollEvent(&event) != 0)
                 {
+                    // User requests quit
                     if (event.type == SDL_QUIT)
                     {
                         quit = true;
