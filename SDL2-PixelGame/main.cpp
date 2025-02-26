@@ -38,106 +38,116 @@ SDL_Surface *gScreenSurface = NULL;
 // Texture wrapper class
 class LTexture
 {
-    public:
-        //Initializes variables
-        LTexture()
+public:
+    //Initializes variables
+    LTexture()
+    {
+        this->mTexture = NULL;
+        this->mWidth = 0;
+        this->mHeight = 0;
+    }
+
+    // Deallocates memory
+    ~LTexture()
+    {
+        // Deallocate
+        free();
+    }
+
+    // Loads image at specified path
+    bool loadFromFile(std::string path)
+    {
+        // Get rid of pre-existing texture
+        free();
+
+        // The final texture
+        SDL_Texture *newTexture = NULL;
+
+        // Load image at specified path
+        SDL_Surface *loadedSurface = IMG_Load(path.c_str());
+        if (loadedSurface == NULL)
         {
+            printf("Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
+        }
+        else
+        {
+            // Colour key image
+            SDL_SetColorKey(loadedSurface, SDL_TRUE, SDL_MapRGB(loadedSurface->format, 0, 0xFF, 0xFF));
+
+            // Create texture from surface pixels
+            newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
+            if (newTexture == NULL)
+            {
+                printf("Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
+            }
+            else
+            {
+                // Get image dimensions
+                this->mWidth = loadedSurface->w;
+                this->mHeight = loadedSurface->h;
+            }
+
+            // Get rid of old loaded surface
+            SDL_FreeSurface(loadedSurface);
+        }
+
+        // Return success
+        this->mTexture = newTexture;
+        return this->mTexture != NULL;
+    }
+
+    // Deallocates texture
+    void free()
+    {
+        // Free texture if it exists
+        if (this->mTexture != NULL)
+        {
+            SDL_DestroyTexture(this->mTexture);
             this->mTexture = NULL;
             this->mWidth = 0;
             this->mHeight = 0;
         }
+    }
 
-        // Deallocates memory
-        ~LTexture()
+    // Renders texture at given point
+    void render(int x, int y, SDL_Rect *clip = NULL)
+    {
+        // Set rendering space and render to screen
+        SDL_Rect renderQuad = { x, y, this->mWidth, this->mHeight };
+
+        // Set clip rendering dimensions
+        if (clip != NULL)
         {
-            // Deallocate
-            free();
+            renderQuad.w = clip->w;
+            renderQuad.h = clip->h;
         }
 
-        // Loads image at specified path
-        bool loadFromFile(std::string path)
-        {
-            // Get rid of pre-existing texture
-            free();
+        // Render to screen
+        SDL_RenderCopy(gRenderer, this->mTexture, clip, &renderQuad);
+    }
 
-            // The final texture
-            SDL_Texture *newTexture = NULL;
+    // Gets image dimensions
+    int getWidth()
+    {
+        return this->mWidth;
+    }
+    int getHeight()
+    {
+        return this->mHeight;
+    }
 
-            // Load image at specified path
-            SDL_Surface *loadedSurface = IMG_Load(path.c_str());
-            if (loadedSurface == NULL)
-            {
-                printf("Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
-            }
-            else
-            {
-                // Colour key image
-                SDL_SetColorKey(loadedSurface, SDL_TRUE, SDL_MapRGB(loadedSurface->format, 0, 0xFF, 0xFF));
+private:
+    // The actual hardware texture
+    SDL_Texture *mTexture;
 
-                // Create texture from surface pixels
-                newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
-                if (newTexture == NULL)
-                {
-                    printf("Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
-                }
-                else
-                {
-                    // Get image dimensions
-                    this->mWidth = loadedSurface->w;
-                    this->mHeight = loadedSurface->h;
-                }
-
-                // Get rid of old loaded surface
-                SDL_FreeSurface(loadedSurface);
-            }
-
-            // Return success
-            this->mTexture = newTexture;
-            return this->mTexture != NULL;
-        }
-
-        // Deallocates texture
-        void free()
-        {
-            // Free texture if it exists
-            if (this->mTexture != NULL)
-            {
-                SDL_DestroyTexture(this->mTexture);
-                this->mTexture = NULL;
-                this->mWidth = 0;
-                this->mHeight = 0;
-            }
-        }
-
-        // Renders texture at given point
-        void render(int x, int y)
-        {
-            // Set rendering space and render to screen
-            SDL_Rect renderQuad = { x, y, this->mWidth, this->mHeight };
-            SDL_RenderCopy(gRenderer, this->mTexture, NULL, &renderQuad);
-        }
-
-        // Gets image dimensions
-        int getWidth()
-        {
-            return this->mWidth;
-        }
-        int getHeight()
-        {
-            return this->mHeight;
-        }
-
-    private:
-        // The actual hardware texture
-        SDL_Texture *mTexture;
-
-        // Image dimensions
-        int mWidth;
-        int mHeight;
+    // Image dimensions
+    int mWidth;
+    int mHeight;
 };
 
-LTexture gFooTexture;
-LTexture gBackgroundTexture;
+SDL_Rect gSpriteClips[4];
+
+LTexture gSpriteSheetTexture;
 
 bool init()
 {
@@ -199,18 +209,37 @@ bool loadMedia()
     // Loading success flag
     bool success = true;
 
-    // Load Foo's texture
-    if (!gFooTexture.loadFromFile("foo.png"))
+    // Load sprite sheet texture
+    if (!gSpriteSheetTexture.loadFromFile("dots.png"))
     {
-        printf("Failed to load Foo's texture image!\n");
+        printf("Failed to load sprite sheet texture image!\n");
         success = false;
     }
-
-    // Load background texture
-    if (!gBackgroundTexture.loadFromFile("background.png"))
+    else
     {
-        printf("Failed to load background texture image!\n");
-        success = false;
+        // Set top left sprite
+        gSpriteClips[0].x = 0;
+        gSpriteClips[0].y = 0;
+        gSpriteClips[0].w = 100;
+        gSpriteClips[0].h = 100;
+
+        // Set top right sprite
+        gSpriteClips[1].x = 100;
+        gSpriteClips[1].y = 0;
+        gSpriteClips[1].w = 100;
+        gSpriteClips[1].h = 100;
+
+        // Set bottom left sprite
+        gSpriteClips[2].x = 0;
+        gSpriteClips[2].y = 100;
+        gSpriteClips[2].w = 100;
+        gSpriteClips[2].h = 100;
+
+        // Set bottom right sprite
+        gSpriteClips[3].x = 100;
+        gSpriteClips[3].y = 100;
+        gSpriteClips[3].w = 100;
+        gSpriteClips[3].h = 100;
     }
 
     return success;
@@ -219,8 +248,7 @@ bool loadMedia()
 void close()
 {
     // Free loaded image
-    gFooTexture.free();
-    gBackgroundTexture.free();
+    gSpriteSheetTexture.free();
 
     // Destroy window
     SDL_DestroyRenderer(gRenderer);
@@ -326,11 +354,33 @@ int main(int argc, char *argv[])
                 SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 SDL_RenderClear(gRenderer);
 
-                // Render background texture to screen
-                gBackgroundTexture.render(0, 0);
+                // Render top left sprite
+                gSpriteSheetTexture.render(
+                    0,
+                    0,
+                    &gSpriteClips[0]
+                );
 
-                // Render Foo to the screen
-                gFooTexture.render(240, 190);
+                // Render top right sprite
+                gSpriteSheetTexture.render(
+                    SCREEN_WIDTH - gSpriteClips[1].w,
+                    0,
+                    &gSpriteClips[1]
+                );
+
+                // Render bottom left sprite
+                gSpriteSheetTexture.render(
+                    0,
+                    SCREEN_HEIGHT - gSpriteClips[2].h,
+                    &gSpriteClips[2]
+                );
+
+                // Render bottom right sprite
+                gSpriteSheetTexture.render(
+                    SCREEN_WIDTH - gSpriteClips[3].w,
+                    SCREEN_HEIGHT - gSpriteClips[3].h,
+                    &gSpriteClips[3]
+                );
 
                 // Update screen
                 SDL_RenderPresent(gRenderer);
