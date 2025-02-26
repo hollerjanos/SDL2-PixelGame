@@ -35,136 +35,137 @@ SDL_Surface *gScreenSurface = NULL;
 // Texture wrapper class
 class LTexture
 {
-public:
-    //Initializes variables
-    LTexture()
-    {
-        this->mTexture = NULL;
-        this->mWidth = 0;
-        this->mHeight = 0;
-    }
-
-    // Deallocates memory
-    ~LTexture()
-    {
-        // Deallocate
-        free();
-    }
-
-    // Loads image at specified path
-    bool loadFromFile(std::string path)
-    {
-        // Get rid of pre-existing texture
-        free();
-
-        // The final texture
-        SDL_Texture *newTexture = NULL;
-
-        // Load image at specified path
-        SDL_Surface *loadedSurface = IMG_Load(path.c_str());
-        if (loadedSurface == NULL)
+    public:
+        //Initializes variables
+        LTexture()
         {
-            printf("Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
-        }
-        else
-        {
-            // Colour key image
-            SDL_SetColorKey(loadedSurface, SDL_TRUE, SDL_MapRGB(loadedSurface->format, 0, 0xFF, 0xFF));
-
-            // Create texture from surface pixels
-            newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
-            if (newTexture == NULL)
-            {
-                printf("Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
-            }
-            else
-            {
-                // Get image dimensions
-                this->mWidth = loadedSurface->w;
-                this->mHeight = loadedSurface->h;
-            }
-
-            // Get rid of old loaded surface
-            SDL_FreeSurface(loadedSurface);
-        }
-
-        // Return success
-        this->mTexture = newTexture;
-        return this->mTexture != NULL;
-    }
-
-    // Deallocates texture
-    void free()
-    {
-        // Free texture if it exists
-        if (this->mTexture != NULL)
-        {
-            SDL_DestroyTexture(this->mTexture);
             this->mTexture = NULL;
             this->mWidth = 0;
             this->mHeight = 0;
         }
-    }
 
-    // Set colour modulation
-    void setColour(Uint8 red, Uint8 green, Uint8 blue)
-    {
-        SDL_SetTextureColorMod(this->mTexture, red, green, blue);
-    }
-
-    // Set blending
-    void setBlendMode(SDL_BlendMode blending)
-    {
-        // Set blending function
-        SDL_SetTextureBlendMode(this->mTexture, blending);
-    }
-
-    // Set alpha modulation
-    void setAlpha(Uint8 alpha)
-    {
-        // Modulate texture alpha
-        SDL_SetTextureAlphaMod(this->mTexture, alpha);
-    }
-
-    // Renders texture at given point
-    void render(int x, int y, SDL_Rect *clip = NULL)
-    {
-        // Set rendering space and render to screen
-        SDL_Rect renderQuad = { x, y, this->mWidth, this->mHeight };
-
-        // Set clip rendering dimensions
-        if (clip != NULL)
+        // Deallocates memory
+        ~LTexture()
         {
-            renderQuad.w = clip->w;
-            renderQuad.h = clip->h;
+            // Deallocate
+            free();
         }
 
-        // Render to screen
-        SDL_RenderCopy(gRenderer, this->mTexture, clip, &renderQuad);
-    }
+        // Loads image at specified path
+        bool loadFromFile(std::string path)
+        {
+            // Get rid of pre-existing texture
+            free();
 
-    // Gets image dimensions
-    int getWidth()
-    {
-        return this->mWidth;
-    }
-    int getHeight()
-    {
-        return this->mHeight;
-    }
+            // The final texture
+            SDL_Texture *newTexture = NULL;
 
-private:
-    // The actual hardware texture
-    SDL_Texture *mTexture;
+            // Load image at specified path
+            SDL_Surface *loadedSurface = IMG_Load(path.c_str());
+            if (loadedSurface == NULL)
+            {
+                printf("Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
+            }
+            else
+            {
+                // Colour key image
+                SDL_SetColorKey(loadedSurface, SDL_TRUE, SDL_MapRGB(loadedSurface->format, 0, 0xFF, 0xFF));
 
-    // Image dimensions
-    int mWidth;
-    int mHeight;
+                // Create texture from surface pixels
+                newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
+                if (newTexture == NULL)
+                {
+                    printf("Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
+                }
+                else
+                {
+                    // Get image dimensions
+                    this->mWidth = loadedSurface->w;
+                    this->mHeight = loadedSurface->h;
+                }
+
+                // Get rid of old loaded surface
+                SDL_FreeSurface(loadedSurface);
+            }
+
+            // Return success
+            this->mTexture = newTexture;
+            return this->mTexture != NULL;
+        }
+
+        // Deallocates texture
+        void free()
+        {
+            // Free texture if it exists
+            if (this->mTexture != NULL)
+            {
+                SDL_DestroyTexture(this->mTexture);
+                this->mTexture = NULL;
+                this->mWidth = 0;
+                this->mHeight = 0;
+            }
+        }
+
+        // Set colour modulation
+        void setColour(Uint8 red, Uint8 green, Uint8 blue)
+        {
+            SDL_SetTextureColorMod(this->mTexture, red, green, blue);
+        }
+
+        // Set blending
+        void setBlendMode(SDL_BlendMode blending)
+        {
+            // Set blending function
+            SDL_SetTextureBlendMode(this->mTexture, blending);
+        }
+
+        // Set alpha modulation
+        void setAlpha(Uint8 alpha)
+        {
+            // Modulate texture alpha
+            SDL_SetTextureAlphaMod(this->mTexture, alpha);
+        }
+
+        // Renders texture at given point
+        void render(int x, int y, SDL_Rect *clip = NULL)
+        {
+            // Set rendering space and render to screen
+            SDL_Rect renderQuad = { x, y, this->mWidth, this->mHeight };
+
+            // Set clip rendering dimensions
+            if (clip != NULL)
+            {
+                renderQuad.w = clip->w;
+                renderQuad.h = clip->h;
+            }
+
+            // Render to screen
+            SDL_RenderCopy(gRenderer, this->mTexture, clip, &renderQuad);
+        }
+
+        // Gets image dimensions
+        int getWidth()
+        {
+            return this->mWidth;
+        }
+        int getHeight()
+        {
+            return this->mHeight;
+        }
+
+    private:
+        // The actual hardware texture
+        SDL_Texture *mTexture;
+
+        // Image dimensions
+        int mWidth;
+        int mHeight;
 };
 
-LTexture gModulatedTexture;
-
-LTexture gBackgroundTexture;
+// Walking animation
+constexpr int WALKING_ANIMATION_FRAMES = 4;
+SDL_Rect gSpriteClips[WALKING_ANIMATION_FRAMES];
+LTexture gSpriteSheetTexture;
 
 bool init()
 {
@@ -195,8 +196,12 @@ bool init()
         }
         else
         {
-            // Create renderer for window
-            gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED);
+            // Create v-synced renderer for window
+            gRenderer = SDL_CreateRenderer(
+                gWindow,
+                -1,
+                SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
+            );
             if (gRenderer == NULL)
             {
                 printf("Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
@@ -227,22 +232,33 @@ bool loadMedia()
     bool success = true;
 
     // Load front alpha texture
-    if (!gModulatedTexture.loadFromFile("fade-out.png"))
+    if (!gSpriteSheetTexture.loadFromFile("foo-animation.png"))
     {
-        printf("Failed to load front texture!\n");
+        printf("Failed to load walking animation texture!\n");
         success = false;
     }
     else
     {
-        // Set standard alpha blending
-        gModulatedTexture.setBlendMode(SDL_BLENDMODE_BLEND);
-    }
+        // Set sprite clips
+        gSpriteClips[0].x = 0;
+        gSpriteClips[0].y = 0;
+        gSpriteClips[0].w = 64;
+        gSpriteClips[0].h = 192;
 
-    // Load background texture
-    if (!gBackgroundTexture.loadFromFile("fade-in.png"))
-    {
-        printf("Failed to load background texture!\n");
-        success = false;
+        gSpriteClips[1].x = 64;
+        gSpriteClips[1].y = 0;
+        gSpriteClips[1].w = 64;
+        gSpriteClips[1].h = 192;
+
+        gSpriteClips[2].x = 128;
+        gSpriteClips[2].y = 0;
+        gSpriteClips[2].w = 64;
+        gSpriteClips[2].h = 192;
+
+        gSpriteClips[3].x = 192;
+        gSpriteClips[3].y = 0;
+        gSpriteClips[3].w = 64;
+        gSpriteClips[3].h = 192;
     }
 
     return success;
@@ -251,7 +267,7 @@ bool loadMedia()
 void close()
 {
     // Free loaded image
-    gModulatedTexture.free();
+    gSpriteSheetTexture.free();
 
     // Destroy window
     SDL_DestroyRenderer(gRenderer);
@@ -340,8 +356,8 @@ int main(int argc, char *argv[])
             // Event handler
             SDL_Event event;
 
-            // Modulation components
-            Uint8 a = 255;
+            // Current animation frame
+            int frame = 0;
 
             // While application is running
             while (!quit)
@@ -354,53 +370,31 @@ int main(int argc, char *argv[])
                     {
                         quit = true;
                     }
-                    // Handle key presses
-                    else if (event.type == SDL_KEYDOWN)
-                    {
-                        // Increase alpha on w
-                        if (event.key.keysym.sym == SDLK_w)
-                        {
-                            // Cap it over 255
-                            if (a + 32 > 255)
-                            {
-                                a = 255;
-                            }
-                            // Increment otherwise
-                            else
-                            {
-                                a += 32;
-                            }
-                        }
-                        // Decrease alpha on s
-                        else if (event.key.keysym.sym == SDLK_s)
-                        {
-                            // Cap it below 0
-                            if (a - 32 < 0)
-                            {
-                                a = 0;
-                            }
-                            // Decrement otherwise
-                            else
-                            {
-                                a -= 32;
-                            }
-                        }
-                    }
                 }
 
                 // Clear screen
                 SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 SDL_RenderClear(gRenderer);
 
-                // Render background
-                gBackgroundTexture.render(0, 0);
-
-                // Render front blended
-                gModulatedTexture.setAlpha(a);
-                gModulatedTexture.render(0, 0);
+                // Render current frame
+                SDL_Rect *currentClip = &gSpriteClips[frame / 4];
+                gSpriteSheetTexture.render(
+                    (SCREEN_WIDTH - currentClip->w) / 2,
+                    (SCREEN_HEIGHT - currentClip->h) / 2,
+                    currentClip
+                );
 
                 // Update screen
                 SDL_RenderPresent(gRenderer);
+
+                // Go to next frame
+                ++frame;
+
+                // Cycle animation
+                if (frame / 4 >= WALKING_ANIMATION_FRAMES)
+                {
+                    frame = 0;
+                }
             }
         }
     }
