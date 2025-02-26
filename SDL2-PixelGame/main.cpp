@@ -112,6 +112,20 @@ public:
         SDL_SetTextureColorMod(this->mTexture, red, green, blue);
     }
 
+    // Set blending
+    void setBlendMode(SDL_BlendMode blending)
+    {
+        // Set blending function
+        SDL_SetTextureBlendMode(this->mTexture, blending);
+    }
+
+    // Set alpha modulation
+    void setAlpha(Uint8 alpha)
+    {
+        // Modulate texture alpha
+        SDL_SetTextureAlphaMod(this->mTexture, alpha);
+    }
+
     // Renders texture at given point
     void render(int x, int y, SDL_Rect *clip = NULL)
     {
@@ -149,6 +163,8 @@ private:
 };
 
 LTexture gModulatedTexture;
+
+LTexture gBackgroundTexture;
 
 bool init()
 {
@@ -210,10 +226,22 @@ bool loadMedia()
     // Loading success flag
     bool success = true;
 
-    // Load sprite sheet texture
-    if (!gModulatedTexture.loadFromFile("modulation.png"))
+    // Load front alpha texture
+    if (!gModulatedTexture.loadFromFile("fade-out.png"))
     {
-        printf("Failed to load sprite sheet texture image!\n");
+        printf("Failed to load front texture!\n");
+        success = false;
+    }
+    else
+    {
+        // Set standard alpha blending
+        gModulatedTexture.setBlendMode(SDL_BLENDMODE_BLEND);
+    }
+
+    // Load background texture
+    if (!gBackgroundTexture.loadFromFile("fade-in.png"))
+    {
+        printf("Failed to load background texture!\n");
         success = false;
     }
 
@@ -313,9 +341,7 @@ int main(int argc, char *argv[])
             SDL_Event event;
 
             // Modulation components
-            Uint8 r = 255;
-            Uint8 g = 255;
-            Uint8 b = 255;
+            Uint8 a = 255;
 
             // While application is running
             while (!quit)
@@ -328,40 +354,36 @@ int main(int argc, char *argv[])
                     {
                         quit = true;
                     }
-                    // On keypress change RGB values
+                    // Handle key presses
                     else if (event.type == SDL_KEYDOWN)
                     {
-                        switch (event.key.keysym.sym)
+                        // Increase alpha on w
+                        if (event.key.keysym.sym == SDLK_w)
                         {
-                            // Increase red
-                            case SDLK_q:
-                                r += 32;
-                                break;
-
-                            // Increase green
-                            case SDLK_w:
-                                g += 32;
-                                break;
-
-                            // Increase blue
-                            case SDLK_e:
-                                b += 32;
-                                break;
-
-                            // Decrease red
-                            case SDLK_a:
-                                r -= 32;
-                                break;
-
-                            // Decrease green
-                            case SDLK_s:
-                                g -= 32;
-                                break;
-
-                            // Decrease blue
-                            case SDLK_d:
-                                b -= 32;
-                                break;
+                            // Cap it over 255
+                            if (a + 32 > 255)
+                            {
+                                a = 255;
+                            }
+                            // Increment otherwise
+                            else
+                            {
+                                a += 32;
+                            }
+                        }
+                        // Decrease alpha on s
+                        else if (event.key.keysym.sym == SDLK_s)
+                        {
+                            // Cap it below 0
+                            if (a - 32 < 0)
+                            {
+                                a = 0;
+                            }
+                            // Decrement otherwise
+                            else
+                            {
+                                a -= 32;
+                            }
                         }
                     }
                 }
@@ -370,8 +392,11 @@ int main(int argc, char *argv[])
                 SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 SDL_RenderClear(gRenderer);
 
-                // Modulate and render texture
-                gModulatedTexture.setColour(r, g, b);
+                // Render background
+                gBackgroundTexture.render(0, 0);
+
+                // Render front blended
+                gModulatedTexture.setAlpha(a);
                 gModulatedTexture.render(0, 0);
 
                 // Update screen
