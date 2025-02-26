@@ -29,9 +29,6 @@ SDL_Window *gWindow = NULL;
 // The window renderer
 SDL_Renderer *gRenderer = NULL;
 
-// Current displayed texture
-SDL_Texture *gTexture = NULL;
-
 // The surface contained by the window
 SDL_Surface *gScreenSurface = NULL;
 
@@ -109,6 +106,12 @@ public:
         }
     }
 
+    // Set colour modulation
+    void setColour(Uint8 red, Uint8 green, Uint8 blue)
+    {
+        SDL_SetTextureColorMod(this->mTexture, red, green, blue);
+    }
+
     // Renders texture at given point
     void render(int x, int y, SDL_Rect *clip = NULL)
     {
@@ -145,9 +148,7 @@ private:
     int mHeight;
 };
 
-SDL_Rect gSpriteClips[4];
-
-LTexture gSpriteSheetTexture;
+LTexture gModulatedTexture;
 
 bool init()
 {
@@ -210,36 +211,10 @@ bool loadMedia()
     bool success = true;
 
     // Load sprite sheet texture
-    if (!gSpriteSheetTexture.loadFromFile("dots.png"))
+    if (!gModulatedTexture.loadFromFile("modulation.png"))
     {
         printf("Failed to load sprite sheet texture image!\n");
         success = false;
-    }
-    else
-    {
-        // Set top left sprite
-        gSpriteClips[0].x = 0;
-        gSpriteClips[0].y = 0;
-        gSpriteClips[0].w = 100;
-        gSpriteClips[0].h = 100;
-
-        // Set top right sprite
-        gSpriteClips[1].x = 100;
-        gSpriteClips[1].y = 0;
-        gSpriteClips[1].w = 100;
-        gSpriteClips[1].h = 100;
-
-        // Set bottom left sprite
-        gSpriteClips[2].x = 0;
-        gSpriteClips[2].y = 100;
-        gSpriteClips[2].w = 100;
-        gSpriteClips[2].h = 100;
-
-        // Set bottom right sprite
-        gSpriteClips[3].x = 100;
-        gSpriteClips[3].y = 100;
-        gSpriteClips[3].w = 100;
-        gSpriteClips[3].h = 100;
     }
 
     return success;
@@ -248,7 +223,7 @@ bool loadMedia()
 void close()
 {
     // Free loaded image
-    gSpriteSheetTexture.free();
+    gModulatedTexture.free();
 
     // Destroy window
     SDL_DestroyRenderer(gRenderer);
@@ -337,6 +312,11 @@ int main(int argc, char *argv[])
             // Event handler
             SDL_Event event;
 
+            // Modulation components
+            Uint8 r = 255;
+            Uint8 g = 255;
+            Uint8 b = 255;
+
             // While application is running
             while (!quit)
             {
@@ -348,39 +328,51 @@ int main(int argc, char *argv[])
                     {
                         quit = true;
                     }
+                    // On keypress change RGB values
+                    else if (event.type == SDL_KEYDOWN)
+                    {
+                        switch (event.key.keysym.sym)
+                        {
+                            // Increase red
+                            case SDLK_q:
+                                r += 32;
+                                break;
+
+                            // Increase green
+                            case SDLK_w:
+                                g += 32;
+                                break;
+
+                            // Increase blue
+                            case SDLK_e:
+                                b += 32;
+                                break;
+
+                            // Decrease red
+                            case SDLK_a:
+                                r -= 32;
+                                break;
+
+                            // Decrease green
+                            case SDLK_s:
+                                g -= 32;
+                                break;
+
+                            // Decrease blue
+                            case SDLK_d:
+                                b -= 32;
+                                break;
+                        }
+                    }
                 }
 
                 // Clear screen
                 SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 SDL_RenderClear(gRenderer);
 
-                // Render top left sprite
-                gSpriteSheetTexture.render(
-                    0,
-                    0,
-                    &gSpriteClips[0]
-                );
-
-                // Render top right sprite
-                gSpriteSheetTexture.render(
-                    SCREEN_WIDTH - gSpriteClips[1].w,
-                    0,
-                    &gSpriteClips[1]
-                );
-
-                // Render bottom left sprite
-                gSpriteSheetTexture.render(
-                    0,
-                    SCREEN_HEIGHT - gSpriteClips[2].h,
-                    &gSpriteClips[2]
-                );
-
-                // Render bottom right sprite
-                gSpriteSheetTexture.render(
-                    SCREEN_WIDTH - gSpriteClips[3].w,
-                    SCREEN_HEIGHT - gSpriteClips[3].h,
-                    &gSpriteClips[3]
-                );
+                // Modulate and render texture
+                gModulatedTexture.setColour(r, g, b);
+                gModulatedTexture.render(0, 0);
 
                 // Update screen
                 SDL_RenderPresent(gRenderer);
