@@ -10,6 +10,20 @@
 constexpr int SCREEN_WIDTH = 640;
 constexpr int SCREEN_HEIGHT = 480;
 
+// Button constants
+constexpr int BUTTON_WIDTH = 300;
+constexpr int BUTTON_HEIGHT = 200;
+constexpr int TOTAL_BUTTONS = 4;
+
+enum LButtonSprite
+{
+    BUTTON_SPRITE_MOUSE_OUT = 0,
+    BUTTON_SPRITE_MOUSE_OVER_MOTION = 1,
+    BUTTON_SPRITE_MOUSE_DOWN = 2,
+    BUTTON_SPRITE_MOUSE_UP = 3,
+    BUTTON_SPRITE_TOTAL = 4,
+};
+
 // Starts up SDL and creates window
 bool init();
 
@@ -98,6 +112,7 @@ class LTexture
             return this->mTexture != NULL;
         }
 
+        #if defined(SDL_TTF_MAJOR_VERSION)
         // Creates image from font string
         bool loadFromRenderedText(std::string textureText, SDL_Color textColour)
         {
@@ -132,6 +147,7 @@ class LTexture
             // Return success
             return this->mTexture != NULL;
         }
+        #endif
 
         // Deallocates texture
         void free()
@@ -209,8 +225,113 @@ class LTexture
         int mHeight;
 };
 
-// Rendered texture
-LTexture gTextTexture;
+LTexture gButtonSpriteSheetTexture;
+
+SDL_Rect gSpriteClips[BUTTON_SPRITE_TOTAL];
+
+// The mouse button
+class LButton
+{
+    public:
+        // Initializes internal variables
+        LButton()
+        {
+            this->mPosition.x = 0;
+            this->mPosition.y = 0;
+
+            this->mCurrentSprite = BUTTON_SPRITE_MOUSE_OUT;
+        }
+
+        // Sets top left position
+        void setPosition(int x, int y)
+        {
+            this->mPosition.x = x;
+            this->mPosition.y = y;
+        }
+
+        // Handles mouse event
+        void handleEvent(SDL_Event *event)
+        {
+            // If mouse event happened
+            if (event->type == SDL_MOUSEMOTION ||
+                event->type == SDL_MOUSEBUTTONDOWN ||
+                event->type == SDL_MOUSEBUTTONUP)
+            {
+                // Get mouse position
+                int x, y;
+                SDL_GetMouseState(&x, &y);
+
+                // Checks if mouse is in button
+                bool inside = true;
+
+                // Mouse is left of the button
+                if (x < this->mPosition.x)
+                {
+                    inside = false;
+                }
+                // Mouse is right of the button
+                else if (x > this->mPosition.x + BUTTON_WIDTH)
+                {
+                    inside = false;
+                }
+                // Mouse is above the button
+                else if (y < this->mPosition.y)
+                {
+                    inside = false;
+                }
+                // Mouse is below the button
+                else if (y > this->mPosition.y + BUTTON_HEIGHT)
+                {
+                    inside = false;
+                }
+
+                // Mouse is outside the button
+                if (!inside)
+                {
+                    this->mCurrentSprite = BUTTON_SPRITE_MOUSE_OUT;
+                }
+                // Mouse is inside the button
+                else
+                {
+                    // Set the mouse over sprite
+                    switch (event->type)
+                    {
+                        case SDL_MOUSEMOTION:
+                            this->mCurrentSprite = BUTTON_SPRITE_MOUSE_OVER_MOTION;
+                            break;
+
+                        case SDL_MOUSEBUTTONDOWN:
+                            this->mCurrentSprite = BUTTON_SPRITE_MOUSE_DOWN;
+                            break;
+
+                        case SDL_MOUSEBUTTONUP:
+                            this->mCurrentSprite = BUTTON_SPRITE_MOUSE_UP;
+                            break;
+                    }
+                }
+            }
+        }
+
+        // Show button sprite
+        void render()
+        {
+            // Show current button sprite
+            gButtonSpriteSheetTexture.render(
+                this->mPosition.x,
+                this->mPosition.y,
+                &gSpriteClips[this->mCurrentSprite]
+            );
+        }
+
+    private:
+        // Top left position
+        SDL_Point mPosition;
+
+        // Currently used global sprite
+        LButtonSprite mCurrentSprite;
+};
+
+LButton gButtons[TOTAL_BUTTONS];
 
 bool init()
 {
@@ -283,22 +404,28 @@ bool loadMedia()
     // Loading success flag
     bool success = true;
 
-    // Open the font
-    gFont = TTF_OpenFont("lazy.ttf", 28);
-    if (gFont == NULL)
+    // Load sprites
+    if (!gButtonSpriteSheetTexture.loadFromFile("button.png"))
     {
-        printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
+        printf("Failed to load button sprite texture!\n");
         success = false;
     }
     else
     {
-        // Render text
-        SDL_Color textColour = { 0, 0, 0 };
-        if (!gTextTexture.loadFromRenderedText("The quick brown fox jumps over the lazy dog.", textColour))
+        // Set sprites
+        for (int i = 0; i < BUTTON_SPRITE_TOTAL; ++i)
         {
-            printf("Failed to render text texture!\n");
-            success = false;
+            gSpriteClips[i].x = 0;
+            gSpriteClips[i].y = i * 200;
+            gSpriteClips[i].w = BUTTON_WIDTH;
+            gSpriteClips[i].h = BUTTON_HEIGHT;
         }
+
+        // Set buttons in corners
+        gButtons[0].setPosition(0, 0);
+        gButtons[1].setPosition(SCREEN_WIDTH - BUTTON_WIDTH, 0);
+        gButtons[2].setPosition(0, SCREEN_HEIGHT - BUTTON_HEIGHT);
+        gButtons[3].setPosition(SCREEN_WIDTH - BUTTON_WIDTH, SCREEN_HEIGHT - BUTTON_HEIGHT);
     }
 
     return success;
@@ -307,7 +434,7 @@ bool loadMedia()
 void close()
 {
     // Free loaded images
-    gTextTexture.free();
+    gButtonSpriteSheetTexture.free();
 
     // Free global font
     TTF_CloseFont(gFont);
@@ -418,17 +545,23 @@ int main(int argc, char *argv[])
                     {
                         quit = true;
                     }
+
+                    // Handle button events
+                    for (int i = 0; i < TOTAL_BUTTONS; ++i)
+                    {
+                        gButtons[i].handleEvent(&event);
+                    }
                 }
 
                 // Clear screen
                 SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 SDL_RenderClear(gRenderer);
 
-                // Render current frame
-                gTextTexture.render(
-                    (SCREEN_WIDTH - gTextTexture.getWidth()) / 2,
-                    (SCREEN_HEIGHT - gTextTexture.getHeight()) / 2
-                );
+                // Render buttons
+                for (int i = 0; i < TOTAL_BUTTONS; ++i)
+                {
+                    gButtons[i].render();
+                }
 
                 // Update screen
                 SDL_RenderPresent(gRenderer);
