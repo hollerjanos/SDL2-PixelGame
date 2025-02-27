@@ -1,7 +1,9 @@
-// Using SDL, SDL_iamge, standard IO and strings
-#include "SDL.h"
-#include "SDL_image.h"
+// Using SDL, SDL_image, SDL_ttf, standard IO, math and strings
+#include <SDL.h>
+#include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <stdio.h>
+#include <cmath>
 #include <string>
 
 // Screen dimension constants
@@ -31,6 +33,9 @@ SDL_Renderer *gRenderer = NULL;
 
 // The surface contained by the window
 SDL_Surface *gScreenSurface = NULL;
+
+// Globally used font
+TTF_Font *gFont = NULL;
 
 // Texture wrapper class
 class LTexture
@@ -90,6 +95,41 @@ class LTexture
 
             // Return success
             this->mTexture = newTexture;
+            return this->mTexture != NULL;
+        }
+
+        // Creates image from font string
+        bool loadFromRenderedText(std::string textureText, SDL_Color textColour)
+        {
+            // Get rid of pre-existing texture
+            free();
+
+            // Render text surface
+            SDL_Surface *textSurface = TTF_RenderText_Solid(gFont, textureText.c_str(), textColour);
+            if (textSurface == NULL)
+            {
+                printf("Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError());
+            }
+            else
+            {
+                // Create texture from surface pixels
+                this->mTexture = SDL_CreateTextureFromSurface(gRenderer, textSurface);
+                if (this->mTexture == NULL)
+                {
+                    printf("Unable to create texture from rendered text! SDL Error: %s\n", SDL_GetError());
+                }
+                else
+                {
+                    // Get image dimensions
+                    this->mWidth = textSurface->w;
+                    this->mHeight = textSurface->h;
+                }
+
+                // Get rid of old surface
+                SDL_FreeSurface(textSurface);
+            }
+
+            // Return success
             return this->mTexture != NULL;
         }
 
@@ -169,7 +209,8 @@ class LTexture
         int mHeight;
 };
 
-LTexture gArrowTexture;
+// Rendered texture
+LTexture gTextTexture;
 
 bool init()
 {
@@ -223,6 +264,13 @@ bool init()
                     printf("SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
                     success = false;
                 }
+
+                // Initialize SDL_ttf
+                if (TTF_Init() == -1)
+                {
+                    printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
+                    success = false;
+                }
             }
         }
     }
@@ -235,11 +283,22 @@ bool loadMedia()
     // Loading success flag
     bool success = true;
 
-    // Load front alpha texture
-    if (!gArrowTexture.loadFromFile("arrow.png"))
+    // Open the font
+    gFont = TTF_OpenFont("lazy.ttf", 28);
+    if (gFont == NULL)
     {
-        printf("Failed to load walking animation texture!\n");
+        printf("Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError());
         success = false;
+    }
+    else
+    {
+        // Render text
+        SDL_Color textColour = { 0, 0, 0 };
+        if (!gTextTexture.loadFromRenderedText("The quick brown fox jumps over the lazy dog.", textColour))
+        {
+            printf("Failed to render text texture!\n");
+            success = false;
+        }
     }
 
     return success;
@@ -247,8 +306,12 @@ bool loadMedia()
 
 void close()
 {
-    // Free loaded image
-    gArrowTexture.free();
+    // Free loaded images
+    gTextTexture.free();
+
+    // Free global font
+    TTF_CloseFont(gFont);
+    gFont = NULL;
 
     // Destroy window
     SDL_DestroyRenderer(gRenderer);
@@ -257,6 +320,7 @@ void close()
     gWindow = NULL;
 
     // Quit SDL subsystems
+    TTF_Quit();
     IMG_Quit();
     SDL_Quit();
 }
@@ -354,45 +418,16 @@ int main(int argc, char *argv[])
                     {
                         quit = true;
                     }
-                    else if (event.type == SDL_KEYDOWN)
-                    {
-                        switch (event.key.keysym.sym)
-                        {
-                            case SDLK_a:
-                                degrees -= 60;
-                                break;
-
-                            case SDLK_d:
-                                degrees += 60;
-                                break;
-
-                            case SDLK_q:
-                                flipType = SDL_FLIP_HORIZONTAL;
-                                break;
-
-                            case SDLK_w:
-                                flipType = SDL_FLIP_NONE;
-                                break;
-
-                            case SDLK_e:
-                                flipType = SDL_FLIP_VERTICAL;
-                                break;
-                        }
-                    }
                 }
 
                 // Clear screen
                 SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 SDL_RenderClear(gRenderer);
 
-                // Render arrow
-                gArrowTexture.render(
-                    (SCREEN_WIDTH - gArrowTexture.getWidth()) / 2,
-                    (SCREEN_HEIGHT - gArrowTexture.getHeight()) / 2,
-                    NULL,
-                    degrees,
-                    NULL,
-                    flipType
+                // Render current frame
+                gTextTexture.render(
+                    (SCREEN_WIDTH - gTextTexture.getWidth()) / 2,
+                    (SCREEN_HEIGHT - gTextTexture.getHeight()) / 2
                 );
 
                 // Update screen
